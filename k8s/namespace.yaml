@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agion-airgb
+  labels:
+    name: agion-airgb
+    app: airgb

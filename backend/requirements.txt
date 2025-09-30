@@ -1,0 +1,63 @@
+# Core Framework (Latest as of 2025-09-30)
+fastapi==0.118.0
+uvicorn[standard]==0.37.0
+uvloop==0.21.0
+pydantic==2.11.9
+pydantic-settings==2.11.0
+email-validator==2.3.0
+
+# Database & ORM
+sqlalchemy==2.0.43
+asyncpg==0.30.0
+psycopg2-binary==2.9.10
+alembic==1.16.5
+
+# File Processing
+pandas==2.3.3
+numpy==2.3.3
+openpyxl==3.1.5
+python-multipart==0.0.20
+
+# Charting & Visualization
+matplotlib==3.10.6
+seaborn==0.13.2
+plotly==6.3.0
+kaleido==0.2.1
+
+# Analytics & Forecasting
+prophet==1.1.6  # Facebook Prophet for time series forecasting
+scikit-learn==1.6.2  # Machine learning for anomaly detection
+scipy==1.15.4  # Scientific computing for statistical analysis
+
+# HTTP & WebSocket
+websockets==15.0.1
+aiofiles==24.1.0
+httpx==0.28.1
+requests==2.32.5
+
+# Security
+bcrypt==5.0.0
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+
+# Utilities
+python-dotenv==1.1.1
+
+# Azure Storage
+azure-storage-blob==12.26.0
+azure-core==1.30.2
+aiohttp==3.12.15
+
+# AI Agent Orchestration with LangGraph (Latest compatible versions - 2025-09-30)
+langgraph==0.6.8
+langchain==0.3.27
+langchain-core==0.3.76
+langchain-openai==0.3.33
+langchain-anthropic==0.3.21
+langsmith>=0.3.45  # Required by langchain-core
+
+# OpenAI for GPT-5 (latest)
+openai==1.109.1
+
+# Anthropic for Claude (latest)
+anthropic==0.69.0

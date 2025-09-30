@@ -1,0 +1,39 @@
+# Production Dockerfile for BP-Chat Frontend
+FROM node:18-alpine as builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY frontend/package*.json ./
+
+# Install dependencies with legacy peer deps to avoid conflicts
+RUN npm ci --only=production --legacy-peer-deps
+
+# Copy frontend code
+COPY frontend/ .
+
+# Copy production environment file
+COPY frontend/.env.production .env.production
+
+# Build the application
+RUN npm run build
+
+# Production stage with nginx
+FROM nginx:alpine
+
+# Copy custom nginx config (from frontend directory)
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy built application
+COPY --from=builder /app/build /usr/share/nginx/html
+
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost || exit 1
+
+# Expose port
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

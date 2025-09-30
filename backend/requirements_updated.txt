@@ -1,0 +1,52 @@
+# Core Framework
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+
+# Database & ORM
+sqlalchemy
+asyncpg
+aiosqlite
+alembic
+
+# File Processing
+pandas
+numpy
+openpyxl
+python-multipart
+
+# Charting & Visualization
+matplotlib
+seaborn
+plotly
+
+# HTTP & WebSocket
+websockets
+aiofiles
+httpx
+requests
+
+# Utilities
+python-jose[cryptography]
+passlib[bcrypt]
+python-dotenv
+structlog
+
+# Security
+cryptography
+bcrypt
+
+# Validation & Serialization
+email-validator
+
+# Development (optional)
+black
+isort
+mypy
+ruff
+
+# Testing (optional)
+pytest
+pytest-asyncio
+pytest-cov

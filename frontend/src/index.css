@@ -1,0 +1,180 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom CSS Variables for consistent theming */
+:root {
+  --font-system: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Base styles */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: var(--font-system);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    background-color: #ffffff;
+    color: #374151;
+  }
+
+  /* Remove focus outline for mouse users but keep for keyboard users */
+  .js-focus-visible :focus:not(.focus-visible) {
+    outline: none;
+  }
+}
+
+/* Custom component styles */
+@layer components {
+  /* Message content styling */
+  .message-content {
+    @apply leading-relaxed;
+  }
+
+  .message-content p {
+    @apply mb-3 last:mb-0;
+  }
+
+  .message-content ul,
+  .message-content ol {
+    @apply mb-3 pl-6;
+  }
+
+  .message-content li {
+    @apply mb-1;
+  }
+
+  .message-content code {
+    @apply bg-chat-gray-100 px-2 py-1 rounded text-sm font-mono;
+  }
+
+  .message-content pre {
+    @apply bg-chat-gray-100 p-4 rounded-lg overflow-x-auto mb-3;
+  }
+
+  .message-content blockquote {
+    @apply border-l-4 border-chat-gray-300 pl-4 italic text-chat-gray-600;
+  }
+
+  /* Custom scrollbar */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db #f9fafb;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f9fafb;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #d1d5db;
+    border-radius: 3px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #9ca3af;
+  }
+
+  /* File upload area */
+  .file-upload-area {
+    @apply border-2 border-dashed border-chat-gray-300 rounded-lg p-8 text-center transition-colors duration-200;
+  }
+
+  .file-upload-area.drag-active {
+    @apply border-chat-blue-500 bg-chat-blue-50;
+  }
+
+  .file-upload-area.drag-reject {
+    @apply border-red-500 bg-red-50;
+  }
+
+  /* Agent status indicators */
+  .agent-status-idle {
+    @apply bg-chat-gray-100 text-chat-gray-700;
+  }
+
+  .agent-status-processing {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  .agent-status-success {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .agent-status-error {
+    @apply bg-red-100 text-red-800;
+  }
+}
+
+/* Utility classes */
+@layer utilities {
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-in-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  .animate-pulse-subtle {
+    animation: pulseSubtle 2s infinite;
+  }
+
+  /* Focus utilities */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-chat-blue-500 focus:ring-offset-2;
+  }
+
+  .focus-ring-inset {
+    @apply focus:outline-none focus:ring-2 focus:ring-chat-blue-500 focus:ring-inset;
+  }
+}
+
+/* Keyframe animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulseSubtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

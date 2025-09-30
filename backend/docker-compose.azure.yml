@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.azure
+    ports:
+      - "8000:8000"
+    environment:
+      # Core settings
+      - ENVIRONMENT=production
+      - PORT=8000
+      - HOST=0.0.0.0
+      
+      # Storage settings (Azure Blob Storage)
+      - STORAGE_BACKEND=azure
+      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING}
+      - AZURE_STORAGE_CONTAINER_NAME=${AZURE_STORAGE_CONTAINER_NAME:-bpchat-files}
+      - AZURE_STORAGE_SAS_EXPIRY_DAYS=${AZURE_STORAGE_SAS_EXPIRY_DAYS:-7}
+      
+      # Database (PostgreSQL for production)
+      - DATABASE_URL=${DATABASE_URL:-postgresql://bpchat:password@db:5432/bpchat_db}
+      
+      # API Keys
+      - REQUESTY_AI_API_KEY=${REQUESTY_AI_API_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      
+      # CORS
+      - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000"]}
+      
+      # Performance
+      - PYDANTIC_DISABLE_PLUGINS=1
+      - PYTHONUNBUFFERED=1
+      - WEB_CONCURRENCY=4
+      
+    volumes:
+      # Only mount uploads for local storage fallback
+      - ./uploads:/app/uploads
+    depends_on:
+      - db
+    networks:
+      - bpchat-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=bpchat
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=bpchat_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - bpchat-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bpchat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optional: Redis for caching
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - bpchat-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optional: Azurite for local Azure Storage emulation
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    ports:
+      - "10000:10000"  # Blob service
+      - "10001:10001"  # Queue service
+      - "10002:10002"  # Table service
+    volumes:
+      - azurite_data:/data
+    networks:
+      - bpchat-network
+    command: "azurite --loose --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0"
+    restart: unless-stopped
+    profiles:
+      - dev  # Only run with --profile dev
+
+volumes:
+  postgres_data:
+  azurite_data:
+
+networks:
+  bpchat-network:
+    driver: bridge

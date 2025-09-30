@@ -1,0 +1,36 @@
+# Ultra-Lightweight Requirements - September 2025 Latest
+# BP-Chat: LLM (Requesty) + Math - Zero bloat deployment
+
+# Core Framework (Latest 2025)
+fastapi==0.112.4
+uvicorn[standard]==0.30.6
+pydantic==2.9.1
+pydantic-settings==2.5.2
+
+# Database (SQLite only - lightweight)
+sqlalchemy==2.0.34
+aiosqlite==0.21.0
+
+# Essential Data Processing (Latest stable)
+pandas==2.2.3
+numpy==2.1.3
+openpyxl==3.1.5
+
+# Visualization (Latest lightweight)
+plotly==5.23.0
+
+# HTTP & File Handling (Latest)
+httpx==0.27.2
+python-multipart==0.0.12
+aiofiles==24.1.0
+
+# Security & Auth (Latest)
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.2.0
+
+# Environment & Config (Latest)
+python-dotenv==1.0.1
+
+# Validation (Latest)
+email-validator==2.2.0

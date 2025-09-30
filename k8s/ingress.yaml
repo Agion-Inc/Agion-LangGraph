@@ -1,0 +1,65 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: airgb-ingress
+  namespace: agion-airgb
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
+    # CORS headers
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://airgb.agion.dev"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Content-Type, Authorization, X-Request-ID"
+    # WebSocket support for chat
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: SAMEORIGIN";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      
+      location ~* ^/ws {
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+      }
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - airgb.agion.dev
+    secretName: airgb-tls-secret
+  rules:
+  - host: airgb.agion.dev
+    http:
+      paths:
+      # Backend API routes (with rewrite)
+      - path: /api(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: airgb-backend-service
+            port:
+              number: 8000
+      # WebSocket route
+      - path: /ws
+        pathType: Prefix
+        backend:
+          service:
+            name: airgb-backend-service
+            port:
+              number: 8000
+      # Frontend (everything else)
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: airgb-frontend-service
+            port:
+              number: 80

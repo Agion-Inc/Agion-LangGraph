@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test @ Mention</title>
+    <style>
+        .dropdown {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .dropdown.show {
+            display: block;
+        }
+        .dropdown-item {
+            padding: 10px;
+            cursor: pointer;
+        }
+        .dropdown-item:hover {
+            background: #f0f0f0;
+        }
+        .input-container {
+            position: relative;
+            margin: 50px;
+        }
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test @ Mention Feature</h1>
+    <div class="input-container">
+        <div id="dropdown" class="dropdown">
+            <div class="dropdown-item">📁 file: example.csv</div>
+            <div class="dropdown-item">📁 file: data.xlsx</div>
+            <div class="dropdown-item">🤖 agent: Brand Analyzer</div>
+            <div class="dropdown-item">🤖 agent: Anomaly Detector</div>
+        </div>
+        <textarea id="input" placeholder="Type @ to see the menu"></textarea>
+    </div>
+    
+    <div id="debug"></div>
+
+    <script>
+        const input = document.getElementById('input');
+        const dropdown = document.getElementById('dropdown');
+        const debug = document.getElementById('debug');
+        
+        function checkForAtMention() {
+            const cursorPosition = input.selectionStart;
+            const textBeforeCursor = input.value.slice(0, cursorPosition);
+            const atMatch = textBeforeCursor.match(/@(\w*)$/);
+            
+            debug.innerHTML = `
+                <p>Text: "${input.value}"</p>
+                <p>Cursor Position: ${cursorPosition}</p>
+                <p>Text Before Cursor: "${textBeforeCursor}"</p>
+                <p>@ Match: ${atMatch ? atMatch[0] : 'none'}</p>
+            `;
+            
+            if (atMatch) {
+                dropdown.classList.add('show');
+            } else {
+                dropdown.classList.remove('show');
+            }
+        }
+        
+        input.addEventListener('input', () => {
+            setTimeout(checkForAtMention, 0);
+        });
+        
+        input.addEventListener('keyup', checkForAtMention);
+        input.addEventListener('mouseup', checkForAtMention);
+    </script>
+</body>
+</html>

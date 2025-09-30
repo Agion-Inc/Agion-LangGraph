@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airgb-frontend
+  namespace: agion-airgb
+  labels:
+    app: airgb-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airgb-frontend
+  template:
+    metadata:
+      labels:
+        app: airgb-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: agionacr62703.azurecr.io/airgb-frontend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+          name: http
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: frontend-nginx-config
+      imagePullSecrets:
+      - name: acr-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: airgb-frontend-service
+  namespace: agion-airgb
+spec:
+  selector:
+    app: airgb-frontend
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  type: ClusterIP

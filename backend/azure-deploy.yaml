@@ -1,0 +1,132 @@
+# Azure App Service Deployment Configuration
+# For deploying Agent-Chat backend to Azure App Service
+
+name: Agent-Chat Backend
+
+# Runtime stack
+runtime: PYTHON|3.11
+
+# App Service Plan
+sku: B2  # Basic tier, suitable for production
+# Options: F1 (Free), B1/B2/B3 (Basic), S1/S2/S3 (Standard), P1v3/P2v3/P3v3 (Premium)
+
+# Application settings (environment variables)
+appSettings:
+  - name: ENVIRONMENT
+    value: production
+    
+  - name: STORAGE_BACKEND
+    value: azure
+    
+  - name: AZURE_STORAGE_CONNECTION_STRING
+    value: "@Microsoft.KeyVault(SecretUri=https://your-keyvault.vault.azure.net/secrets/storage-connection-string/)"
+    
+  - name: AZURE_STORAGE_CONTAINER_NAME
+    value: bpchat-files
+    
+  - name: AZURE_STORAGE_SAS_EXPIRY_DAYS
+    value: "7"
+    
+  - name: DATABASE_URL
+    value: "@Microsoft.KeyVault(SecretUri=https://your-keyvault.vault.azure.net/secrets/database-url/)"
+    
+  - name: REQUESTY_AI_API_KEY
+    value: "@Microsoft.KeyVault(SecretUri=https://your-keyvault.vault.azure.net/secrets/requesty-api-key/)"
+    
+  - name: JWT_SECRET_KEY
+    value: "@Microsoft.KeyVault(SecretUri=https://your-keyvault.vault.azure.net/secrets/jwt-secret/)"
+    
+  - name: CORS_ORIGINS
+    value: '["https://your-frontend.azurewebsites.net"]'
+    
+  - name: PYDANTIC_DISABLE_PLUGINS
+    value: "1"
+    
+  - name: PYTHONUNBUFFERED
+    value: "1"
+    
+  - name: SCM_DO_BUILD_DURING_DEPLOYMENT
+    value: "true"
+    
+  - name: WEBSITES_PORT
+    value: "8000"
+
+# Startup command
+startupCommand: python start_server_production.py
+
+# Health check
+healthCheckPath: /health
+
+# Scaling configuration
+scaleSettings:
+  minInstances: 1
+  maxInstances: 10
+  rules:
+    - metricTrigger:
+        metricName: CpuPercentage
+        metricResourceId: /subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.Web/serverfarms/{app-service-plan}
+        operator: GreaterThan
+        threshold: 70
+        timeAggregation: Average
+        timeGrain: PT1M
+        timeWindow: PT5M
+      scaleAction:
+        direction: Increase
+        type: ChangeCount
+        value: 1
+        cooldown: PT5M
+
+# Deployment slots (for zero-downtime deployments)
+deploymentSlots:
+  - name: staging
+    enabled: true
+    trafficPercentage: 0
+  - name: production
+    enabled: true
+    trafficPercentage: 100
+
+# Custom domain and SSL
+customDomains:
+  - name: api.yourdomain.com
+    sslState: SniEnabled
+    thumbprint: your-ssl-certificate-thumbprint
+
+# Logging and monitoring
+diagnosticLogs:
+  applicationLogs:
+    fileSystem:
+      level: Information
+    azureBlobStorage:
+      level: Warning
+      retentionInDays: 30
+      sasUrl: "@Microsoft.KeyVault(SecretUri=https://your-keyvault.vault.azure.net/secrets/logs-sas-url/)"
+  httpLogs:
+    fileSystem:
+      enabled: true
+      retentionInDays: 7
+  detailedErrorMessages:
+    enabled: true
+  failedRequestsTracing:
+    enabled: true
+
+# Application Insights
+applicationInsights:
+  enabled: true
+  instrumentationKey: "@Microsoft.KeyVault(SecretUri=https://your-keyvault.vault.azure.net/secrets/appinsights-key/)"
+
+# Backup configuration
+backup:
+  enabled: true
+  schedule:
+    frequencyInterval: 1
+    frequencyUnit: Day
+    keepAtLeastOneBackup: true
+    retentionPeriodInDays: 30
+  storageAccountUrl: "@Microsoft.KeyVault(SecretUri=https://your-keyvault.vault.azure.net/secrets/backup-storage-url/)"
+
+# CORS configuration (handled by FastAPI, but can be set here too)
+cors:
+  allowedOrigins:
+    - https://your-frontend.azurewebsites.net
+    - https://yourdomain.com
+  supportCredentials: true
