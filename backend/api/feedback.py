@@ -13,8 +13,8 @@ from sqlalchemy import select
 import uuid
 
 from core.database import get_db
+from core.governance_client import get_governance_client
 from models import ChatMessage as DBChatMessage, UserFeedback as DBUserFeedback
-from langgraph_agents.metrics_reporter import metrics_reporter
 
 router = APIRouter()
 
@@ -44,18 +44,25 @@ async def submit_feedback(
     """
     Submit user feedback for an agent response.
 
-    This affects the agent's trust score:
-    - 5-star rating: +2.0% trust score boost
-    - 4-star rating: +0.5% trust score boost
-    - Ratings 1-3: Feedback recorded (no trust impact)
-    - Thumbs up (no rating): Positive signal recorded
-    - Thumbs down: Negative signal recorded (defaults to rating=2)
+    Feedback is forwarded to the Agion Governance Service which applies
+    the centralized trust impact algorithm. Trust scoring rules are managed
+    server-side and can be updated without changing client code.
+
+    Trust Impact (managed by governance service):
+    - "Not Helpful": -2.0% trust
+    - "Helpful" + 5 stars: +2.0% trust
+    - "Helpful" + 4 stars: +0.5% trust
+    - "Helpful" + 1-3 stars: 0% (ignored as generous ratings)
+    - "Helpful" without rating: 0% (need rating for signal)
+    - Star rating only (no helpful): Trust based on rating value
+
+    See: agion-sdk-python/TRUST_SCORING_SDK_INTEGRATION_GUIDE.md
 
     Args:
         request: Feedback request with message_id, feedback_type, rating, comment
 
     Returns:
-        FeedbackResponse with status and trust impact information
+        FeedbackResponse with calculated trust impact from governance service
     """
     try:
         # Validate feedback_type
@@ -94,7 +101,7 @@ async def submit_feedback(
         # Determine user_id
         user_id = request.user_id or "anonymous"
 
-        # Store feedback in database
+        # Store feedback in local database
         feedback_id = str(uuid.uuid4())
         db_feedback = DBUserFeedback(
             id=feedback_id,
@@ -108,31 +115,43 @@ async def submit_feedback(
         db.add(db_feedback)
         await db.commit()
 
-        # Report feedback to Agion platform via SDK
+        # Submit feedback to Agion Governance Service for centralized trust scoring
+        governance_client = await get_governance_client()
         full_agent_id = f"langgraph-v2:{agent_id}" if agent_id != "unknown" else "langgraph-v2:general_agent"
 
-        await metrics_reporter.report_user_feedback(
+        # Convert thumbs_up/thumbs_down to is_helpful boolean
+        is_helpful = True if request.feedback_type == "thumbs_up" else False if request.feedback_type == "thumbs_down" else None
+
+        governance_feedback = await governance_client.submit_feedback(
+            response_id=request.message_id,
             agent_id=full_agent_id,
-            execution_id=execution_id,
             user_id=user_id,
-            rating=request.rating or (5 if request.feedback_type == "thumbs_up" else 2),
-            feedback_type=request.feedback_type,
-            comment=request.comment
+            organization_id="default-org",
+            conversation_id=None,  # Could extract from message metadata
+            is_helpful=is_helpful,
+            star_rating=request.rating,
+            feedback_text=request.comment,
+            feedback_category=None,
+            response_metadata={
+                "execution_id": execution_id,
+                "agent_name": agent_id,
+            },
+            user_metadata={
+                "source": "langgraph-ui"
+            }
         )
 
-        # Calculate trust impact message
+        # Calculate trust impact message from governance response
         trust_impact = None
-        if request.rating:
-            if request.rating == 5:
-                trust_impact = "+2% trust score (5-star rating)"
-            elif request.rating == 4:
-                trust_impact = "+0.5% trust score (4-star rating)"
-            elif request.rating < 4:
-                trust_impact = "Feedback recorded (no trust impact for rating < 4)"
-        elif request.feedback_type == "thumbs_up":
-            trust_impact = "Positive signal recorded"
-        elif request.feedback_type == "thumbs_down":
-            trust_impact = "Negative signal recorded"
+        if governance_feedback:
+            calculated_impact = governance_feedback.get("trust_impact_calculated")
+            if calculated_impact is not None:
+                trust_impact = f"{calculated_impact:+.1f}% trust score (calculated by governance service)"
+            else:
+                trust_impact = "Feedback recorded (no trust impact)"
+        else:
+            # Fallback if governance service unavailable
+            trust_impact = "Feedback recorded (governance service unavailable)"
 
         return FeedbackResponse(
             status="success",

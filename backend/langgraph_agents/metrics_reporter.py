@@ -268,7 +268,14 @@ class MetricsReporter:
         comment: Optional[str] = None,
     ) -> None:
         """
-        Report user feedback.
+        DEPRECATED: User feedback should be submitted to Governance Service HTTP API.
+
+        This method is kept for backwards compatibility but only publishes
+        the feedback event to Redis (no trust calculation).
+
+        Trust scoring for user feedback is now handled by:
+        - POST /api/v1/feedback/submit (LangGraph → Governance Service)
+        - Centralized trust impact algorithm in governance service
 
         Args:
             agent_id: Full agent ID
@@ -283,7 +290,7 @@ class MetricsReporter:
             if not sdk:
                 return
 
-            # Publish user feedback event
+            # Publish user feedback event to Redis (for analytics/logging)
             await sdk.event_client.publish_user_feedback(
                 execution_id=execution_id,
                 user_id=user_id,
@@ -292,45 +299,14 @@ class MetricsReporter:
                 comment=comment,
             )
 
-            # Calculate trust impact based on rating
-            # 5 stars: +2% trust
-            # 4 stars: +0.5% trust
-            # <4 stars: No trust impact
-            if rating >= 4:
-                if rating == 5:
-                    trust_impact = 0.02  # +2% trust for 5-star ratings
-                    trust_display = "+2%"
-                else:  # rating == 4
-                    trust_impact = 0.005  # +0.5% trust for 4-star ratings
-                    trust_display = "+0.5%"
-
-                await sdk.event_client.publish_trust_event(
-                    agent_id=agent_id,
-                    event_type=EventType.USER_FEEDBACK,
-                    severity=EventSeverity.POSITIVE,
-                    impact=trust_impact,
-                    confidence=1.0,
-                    context={
-                        "execution_id": execution_id,
-                        "user_id": user_id,
-                        "rating": rating,
-                        "comment": comment[:200] if comment else None,
-                        "timestamp": datetime.utcnow().isoformat(),
-                    },
-                )
-
-                logger.info(
-                    f"👍 {agent_id} received positive feedback "
-                    f"(rating: {rating} stars, trust impact: {trust_display})"
-                )
-            else:
-                logger.info(
-                    f"👎 {agent_id} received feedback "
-                    f"(rating: {rating}, no trust impact)"
-                )
+            logger.info(
+                f"📊 {agent_id} feedback event published: "
+                f"rating={rating}, type={feedback_type} "
+                f"(trust scoring handled by governance service)"
+            )
 
         except Exception as e:
-            logger.error(f"Failed to report user feedback: {e}")
+            logger.error(f"Failed to publish user feedback event: {e}")
 
     @staticmethod
     async def report_llm_interaction(
