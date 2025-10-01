@@ -12,14 +12,18 @@ Routing Logic:
 - General questions → General Agent
 """
 
+import time
 from typing import Dict, Any
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from langgraph_agents.state import AgentState, add_execution_step
+from langgraph_agents.governance_wrapper import governed_node
+from langgraph_agents.metrics_reporter import metrics_reporter
 from core.config import settings
 
 
+@governed_node("supervisor", "route_query")
 async def supervisor_node(state: AgentState) -> AgentState:
     """
     Supervisor node that routes queries to appropriate agents.
@@ -88,15 +92,38 @@ Uploaded files: {len(uploaded_files)} file(s)
 
 Which agent should handle this?"""
 
-    # Call Claude for routing
+    # Call GPT-5 for routing
     try:
         messages = [
             SystemMessage(content=system_prompt),
             HumanMessage(content=user_prompt),
         ]
 
+        llm_start_time = time.time()
         response = await llm.ainvoke(messages)
+        llm_latency_ms = (time.time() - llm_start_time) * 1000
+
         selected_agent = response.content.strip().lower()
+
+        # Log LLM interaction for audit trail
+        execution_id = state.get("execution_id")
+        if execution_id:
+            await metrics_reporter.report_llm_interaction(
+                execution_id=execution_id,
+                agent_id="langgraph-v2:supervisor",
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response_text=response.content,
+                model="openai/gpt-5-chat-latest",
+                provider="requesty",
+                temperature=0.1,
+                latency_ms=llm_latency_ms,
+                user_id=state.get("user_id"),
+                finish_reason=getattr(response.response_metadata, "finish_reason", None) if hasattr(response, "response_metadata") else None,
+                prompt_tokens=getattr(response.response_metadata, "prompt_tokens", None) if hasattr(response, "response_metadata") else None,
+                completion_tokens=getattr(response.response_metadata, "completion_tokens", None) if hasattr(response, "response_metadata") else None,
+                total_tokens=getattr(response.response_metadata, "total_tokens", None) if hasattr(response, "response_metadata") else None,
+            )
 
         # Validate agent selection
         valid_agents = ["chart_generator", "brand_performance", "forecasting", "anomaly_detection", "general_chat"]

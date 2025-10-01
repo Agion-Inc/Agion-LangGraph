@@ -20,6 +20,7 @@ router = APIRouter()
 
 
 class ChatMessage(BaseModel):
+    id: str
     role: str  # 'user' or 'assistant'
     content: str
     timestamp: Optional[datetime] = None
@@ -99,10 +100,12 @@ async def send_chat_message(
         confidence = result_state.get("confidence", 0.0)
         agent_data = result_state.get("agent_data", {})
         error = result_state.get("error")
+        execution_id = result_state.get("execution_id")  # From governance wrapper
 
         # Store assistant message
+        assistant_message_id = str(uuid.uuid4())
         assistant_db_message = DBChatMessage(
-            id=str(uuid.uuid4()),
+            id=assistant_message_id,
             session_id=session_id,
             role="assistant",
             content=agent_response,
@@ -113,6 +116,7 @@ async def send_chat_message(
                 "agent_data": agent_data,
                 "execution_path": result_state.get("execution_path", []),
                 "error": error,
+                "execution_id": execution_id,  # Include for feedback tracking
             }
         )
         db.add(assistant_db_message)
@@ -123,14 +127,17 @@ async def send_chat_message(
 
         # Create chat message response
         assistant_message = ChatMessage(
+            id=assistant_message_id,
             role="assistant",
             content=agent_response,
             timestamp=datetime.utcnow(),
             agent_id=selected_agent,
             metadata={
+                "message_id": assistant_message_id,  # For feedback submission
                 "confidence": confidence,
                 "execution_time": execution_time,
                 "agent_data": agent_data,
+                "execution_id": execution_id,
             }
         )
 
