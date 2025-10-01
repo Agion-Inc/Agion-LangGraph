@@ -292,13 +292,23 @@ class MetricsReporter:
                 comment=comment,
             )
 
-            # If rating >= 4, also publish positive trust event (+0.5%)
+            # Calculate trust impact based on rating
+            # 5 stars: +2% trust
+            # 4 stars: +0.5% trust
+            # <4 stars: No trust impact
             if rating >= 4:
+                if rating == 5:
+                    trust_impact = 0.02  # +2% trust for 5-star ratings
+                    trust_display = "+2%"
+                else:  # rating == 4
+                    trust_impact = 0.005  # +0.5% trust for 4-star ratings
+                    trust_display = "+0.5%"
+
                 await sdk.event_client.publish_trust_event(
                     agent_id=agent_id,
                     event_type=EventType.USER_FEEDBACK,
                     severity=EventSeverity.POSITIVE,
-                    impact=0.005,  # +0.5% trust for good ratings
+                    impact=trust_impact,
                     confidence=1.0,
                     context={
                         "execution_id": execution_id,
@@ -311,7 +321,7 @@ class MetricsReporter:
 
                 logger.info(
                     f"👍 {agent_id} received positive feedback "
-                    f"(rating: {rating}, trust impact: +0.5%)"
+                    f"(rating: {rating} stars, trust impact: {trust_display})"
                 )
             else:
                 logger.info(

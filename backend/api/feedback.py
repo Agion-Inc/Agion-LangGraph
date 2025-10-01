@@ -45,10 +45,11 @@ async def submit_feedback(
     Submit user feedback for an agent response.
 
     This affects the agent's trust score:
-    - Rating ≥4: +0.5% trust score
-    - Rating <4: No trust impact
-    - Thumbs up: Positive signal
-    - Thumbs down: Negative signal
+    - 5-star rating: +2.0% trust score boost
+    - 4-star rating: +0.5% trust score boost
+    - Ratings 1-3: Feedback recorded (no trust impact)
+    - Thumbs up (no rating): Positive signal recorded
+    - Thumbs down: Negative signal recorded (defaults to rating=2)
 
     Args:
         request: Feedback request with message_id, feedback_type, rating, comment
@@ -121,8 +122,13 @@ async def submit_feedback(
 
         # Calculate trust impact message
         trust_impact = None
-        if request.rating and request.rating >= 4:
-            trust_impact = "+0.5% trust score (positive rating)"
+        if request.rating:
+            if request.rating == 5:
+                trust_impact = "+2% trust score (5-star rating)"
+            elif request.rating == 4:
+                trust_impact = "+0.5% trust score (4-star rating)"
+            elif request.rating < 4:
+                trust_impact = "Feedback recorded (no trust impact for rating < 4)"
         elif request.feedback_type == "thumbs_up":
             trust_impact = "Positive signal recorded"
         elif request.feedback_type == "thumbs_down":
