@@ -11,7 +11,8 @@ from contextlib import asynccontextmanager
 
 from core.config import settings
 from core.database import init_db, close_db
-from api import chat, files, health, charts
+from core.agion import AgionClient
+from api import chat, files, health, charts, feedback
 
 
 @asynccontextmanager
@@ -23,6 +24,19 @@ async def lifespan(app: FastAPI):
     # Initialize database
     await init_db()
     print("✅ Database initialized")
+
+    # Initialize Agion SDK
+    try:
+        await AgionClient.initialize()
+        print("✅ Agion SDK initialized (platform integration active)")
+
+        # Register all agents with platform
+        from langgraph_agents.agent_registry import register_all_agents
+        registration_result = await register_all_agents()
+        print(f"✅ Agents registered: {len(registration_result.get('registered', []))} agents")
+    except Exception as e:
+        print(f"⚠️ Agion SDK initialization failed: {e}")
+        print("   Agent will run without platform integration")
 
     # Initialize Azure sync if using Azure storage
     if settings.storage_backend == 'azure':
@@ -68,6 +82,13 @@ async def lifespan(app: FastAPI):
     # Shutdown
     print("🛑 Shutting down Agent-Chat Backend...")
 
+    # Shutdown Agion SDK
+    try:
+        await AgionClient.shutdown()
+        print("✅ Agion SDK shutdown complete")
+    except Exception as e:
+        print(f"⚠️ Agion SDK shutdown error: {e}")
+
     # Stop Azure sync if running
     if settings.storage_backend == 'azure':
         try:
@@ -106,6 +127,7 @@ app.include_router(health.router, prefix=settings.api_prefix, tags=["health"])
 app.include_router(chat.router, prefix=settings.api_prefix, tags=["chat"])
 app.include_router(files.router, prefix=settings.api_prefix, tags=["files"])
 app.include_router(charts.router, prefix=settings.api_prefix, tags=["charts"])
+app.include_router(feedback.router, prefix=settings.api_prefix, tags=["feedback"])
 
 
 @app.get("/")

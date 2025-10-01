@@ -116,6 +116,33 @@ class Settings(BaseSettings):
     rate_limit_requests: int = 100
     rate_limit_window: int = 60  # seconds
 
+    # Agion Platform Integration
+    agion_gateway_url: str = Field(
+        default="http://gateway-service.agion-core.svc.cluster.local:8080",
+        alias="AGION_GATEWAY_URL",
+        description="Agion Gateway Service URL"
+    )
+    agion_redis_url: str = Field(
+        default="redis://redis-service.agion-core.svc.cluster.local:6379",
+        alias="AGION_REDIS_URL",
+        description="Agion Redis URL for events and policy sync"
+    )
+    agion_agent_id: str = Field(
+        default="langgraph-v2",
+        alias="AGION_AGENT_ID",
+        description="Agion agent container identifier"
+    )
+    agion_agent_version: str = Field(
+        default="2.0.0",
+        alias="AGION_AGENT_VERSION",
+        description="Agent container version"
+    )
+    agion_policy_sync_enabled: bool = Field(
+        default=True,
+        alias="AGION_POLICY_SYNC_ENABLED",
+        description="Enable automatic policy synchronization"
+    )
+
     @property
     def is_production(self) -> bool:
         """Check if running in production environment"""

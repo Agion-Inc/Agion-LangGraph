@@ -12,6 +12,7 @@ import type { ChatMessage } from '../../types/chat'
 import { highlightKeywords, renderHighlightedText } from '../../utils/keywordHighlighter'
 import { useAgentStore } from '../../hooks/useAgents'
 import { logger } from '../../utils/logger'
+import FeedbackButtons from './FeedbackButtons'
 
 interface MessageBubbleProps {
   message: ChatMessage
@@ -108,6 +109,18 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Feedback Buttons (only for assistant messages) */}
+            {!isUser && message.id && (
+              <div className="mt-4">
+                <FeedbackButtons
+                  messageId={message.metadata?.message_id || message.id}
+                  onFeedbackSubmit={(feedback) => {
+                    logger.info('Feedback submitted', feedback)
+                  }}
+                />
               </div>
             )}
 

@@ -26,8 +26,8 @@ kaleido==0.2.1
 
 # Analytics & Forecasting
 prophet==1.1.6  # Facebook Prophet for time series forecasting
-scikit-learn==1.6.2  # Machine learning for anomaly detection
-scipy==1.15.4  # Scientific computing for statistical analysis
+scikit-learn==1.7.2  # Machine learning for anomaly detection (latest for Python 3.13)
+scipy==1.16.2  # Scientific computing for statistical analysis (latest for Python 3.13)
 
 # HTTP & WebSocket
 websockets==15.0.1
@@ -61,3 +61,7 @@ openai==1.109.1
 
 # Anthropic for Claude (latest)
 anthropic==0.69.0
+
+# Agion SDK - Platform Integration
+redis==6.4.0
+agion-sdk @ file:///app/agion-sdk-python

@@ -14,12 +14,14 @@ from langgraph_agents.state import AgentState
 from langgraph_agents.tools.database_tools import load_file_metadata, get_database_session
 from langgraph_agents.tools.storage_tools import load_file_from_storage
 from langgraph_agents.tools.chart_tools import create_chart, validate_dataframe_for_chart
+from langgraph_agents.governance_wrapper import governed_node
 
 # Get session_id at module level for chart storage
 def get_session_id_from_state(state):
     return state.get("session_id", "default")
 
 
+@governed_node("chart_agent", "generate_chart")
 async def chart_agent_node(state: AgentState) -> AgentState:
     """
     Chart agent that generates visualizations from data.

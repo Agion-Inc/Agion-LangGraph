@@ -12,7 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
+# Copy SDK and requirements
+COPY agion-sdk-python/ /app/agion-sdk-python/
 COPY backend/requirements.txt .
 
 # Install Python dependencies with optimization
@@ -43,6 +44,9 @@ WORKDIR /app
 
 # Copy Python packages from builder
 COPY --from=builder /root/.local /root/.local
+
+# Copy SDK
+COPY --from=builder /app/agion-sdk-python /app/agion-sdk-python
 
 # Copy backend code
 COPY backend/ .

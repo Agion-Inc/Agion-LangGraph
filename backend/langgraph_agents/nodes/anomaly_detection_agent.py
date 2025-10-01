@@ -18,7 +18,8 @@ from openai import AsyncOpenAI
 
 from ..state import AgentState
 from ..tools.analytics_tools import detect_anomalies_combined, detect_outliers_iqr, detect_outliers_zscore
-from ..tools.storage_tools import get_uploaded_file_data
+# from ..tools.storage_tools import get_uploaded_file_data  # TODO: Implement this function
+from ..governance_wrapper import governed_node
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +137,7 @@ def _detect_anomalies_lof(df: pd.DataFrame, value_column: str, n_neighbors: int 
         return {"error": str(e)}
 
 
+@governed_node("anomaly_detection_agent", "detect_anomalies")
 async def anomaly_detection_agent_node(state: AgentState) -> Dict[str, Any]:
     """
     Anomaly Detection Agent - Identifies outliers and anomalies in data.

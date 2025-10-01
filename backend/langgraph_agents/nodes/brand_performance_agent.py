@@ -22,7 +22,8 @@ from ..tools.analytics_tools import (
     calculate_performance_metrics,
     analyze_trend,
 )
-from ..tools.storage_tools import get_uploaded_file_data
+# from ..tools.storage_tools import get_uploaded_file_data  # TODO: Implement this function
+from ..governance_wrapper import governed_node
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ client = AsyncOpenAI(
 )
 
 
+@governed_node("brand_performance_agent", "analyze_performance")
 async def brand_performance_agent_node(state: AgentState) -> Dict[str, Any]:
     """
     Brand Performance Agent - Analyzes brand/product performance with KPIs and insights.

@@ -185,6 +185,45 @@ async def load_multiple_files(
     return result
 
 
+async def get_uploaded_file_data(
+    file_ids: List[str],
+    db_session
+) -> Dict[str, pd.DataFrame]:
+    """
+    Get uploaded file data from database and load from storage.
+
+    This function is used by analytics agents to load user-uploaded files.
+
+    Args:
+        file_ids: List of file IDs from database
+        db_session: Database session
+
+    Returns:
+        Dict[str, pd.DataFrame]: Map of file_id -> DataFrame
+    """
+    from langgraph_agents.tools.database_tools import load_file_metadata
+
+    try:
+        # Load file metadata from database
+        file_metadata = await load_file_metadata(db_session, file_ids)
+
+        if not file_metadata:
+            return {}
+
+        # Load files from storage
+        result = {}
+        for file in file_metadata:
+            df = await load_file_from_storage(file.file_path)
+            if df is not None:
+                result[file.id] = df
+
+        return result
+
+    except Exception as e:
+        print(f"Error getting uploaded file data: {e}")
+        return {}
+
+
 def _extract_account_name(connection_string: str) -> str:
     """Extract account name from connection string"""
     for part in connection_string.split(';'):

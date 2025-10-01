@@ -18,7 +18,8 @@ from openai import AsyncOpenAI
 
 from ..state import AgentState
 from ..tools.analytics_tools import analyze_trend, simple_moving_average, exponential_moving_average, forecast_naive
-from ..tools.storage_tools import get_uploaded_file_data
+# from ..tools.storage_tools import get_uploaded_file_data  # TODO: Implement this function
+from ..governance_wrapper import governed_node
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +119,7 @@ async def _forecast_with_prophet(
         return {"error": str(e)}
 
 
+@governed_node("forecasting_agent", "forecast")
 async def forecasting_agent_node(state: AgentState) -> Dict[str, Any]:
     """
     Forecasting Agent - Predicts future values using time series analysis.

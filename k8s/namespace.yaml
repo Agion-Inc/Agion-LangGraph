@@ -1,7 +1,9 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: agion-airgb
+  name: agion-langgraph
   labels:
-    name: agion-airgb
-    app: airgb
+    name: agion-langgraph
+    app: langgraph-agents
+    platform.agion.com/component: agent-container
+    platform.agion.com/zone: compute

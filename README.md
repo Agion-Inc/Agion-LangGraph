@@ -29,16 +29,35 @@ A production-ready LangGraph-based multi-agent orchestration platform powered by
 
 ## 📐 Architecture
 
+### Agent Container Pattern
+
+This LangGraph container operates as a **microservice** within the Agion AI platform ecosystem:
+
 ```
 User Query
     ↓
-Supervisor Node (GPT-5)
-    ├─→ Chart Agent (Data Visualization)
-    ├─→ General Agent (Conversation)
+Platform Gateway (agion-core)
+    ↓
+LangGraph Container (agion-langgraph) ←→ Redis Streams (<5ms)
+    ↓                                      ↓
+Supervisor Node (GPT-5)              Governance Service
+    ├─→ Chart Agent                   - Permission checks
+    ├─→ Brand Performance             - Result validation
+    ├─→ Forecasting                   - Trust score updates
+    ├─→ Anomaly Detection
+    ├─→ General Agent
     └─→ [Future agents...]
     ↓
-Response with Metadata
+Response + Governance Metadata
 ```
+
+### Why Separate Microservice?
+
+- **Independent deployment**: Deploy LangGraph updates without affecting other frameworks
+- **Technology freedom**: Use Python 3.13 + LangGraph 0.6.8 optimal stack
+- **Horizontal scaling**: Scale based on LangGraph-specific workload
+- **Security isolation**: Sandbox agent execution in dedicated namespace
+- **Multi-framework support**: Platform will support dozens of agent frameworks (CrewAI, AutoGen, custom frameworks)
 
 ### LangGraph Implementation
 

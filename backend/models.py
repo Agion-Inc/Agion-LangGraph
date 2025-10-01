@@ -160,3 +160,19 @@ class FileAccessLog(Base):
 
     # Relationships
     file = relationship("UploadedFile")
+
+
+class UserFeedback(Base):
+    """User feedback on agent responses - affects trust scores"""
+    __tablename__ = "user_feedback"
+
+    id = Column(String(36), primary_key=True)  # UUID
+    message_id = Column(String(36), ForeignKey("chat_messages.id"), nullable=False)
+    user_id = Column(String(100), nullable=False)  # User who provided feedback
+    feedback_type = Column(String(20), nullable=False)  # 'thumbs_up' or 'thumbs_down'
+    rating = Column(Integer)  # Optional 1-5 rating
+    comment = Column(Text)  # Optional comment
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    message = relationship("ChatMessage")
