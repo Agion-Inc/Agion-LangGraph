@@ -54,28 +54,9 @@ class MetricsReporter:
         """
         start_time = time.time()
 
-        try:
-            sdk = await get_agion_sdk()
-            if not sdk:
-                return start_time
-
-            # Publish execution start event
-            await sdk.event_client.publish_trust_event(
-                agent_id=agent_id,
-                event_type="task_started",
-                severity="info",
-                impact=0.0,
-                confidence=1.0,
-                context={
-                    "execution_id": execution_id,
-                    "query": query[:200],  # Truncate long queries
-                    "user_id": user_id,
-                    "timestamp": datetime.utcnow().isoformat(),
-                },
-            )
-
-        except Exception as e:
-            logger.error(f"Failed to report execution start: {e}")
+        # Note: We don't report execution start as trust events
+        # Only completion, failure, or errors affect trust scores
+        logger.debug(f"🚀 {agent_id} execution started (id: {execution_id})")
 
         return start_time
 
@@ -108,8 +89,8 @@ class MetricsReporter:
             # Publish success event with +2% trust impact
             await sdk.event_client.publish_trust_event(
                 agent_id=agent_id,
-                event_type="task_completed",
-                severity="positive",
+                event_type=EventType.TASK_COMPLETED,
+                severity=EventSeverity.POSITIVE,
                 impact=0.02,  # +2% trust per success
                 confidence=1.0,
                 context={
@@ -158,8 +139,8 @@ class MetricsReporter:
             # Publish failure event with -2% trust impact
             await sdk.event_client.publish_trust_event(
                 agent_id=agent_id,
-                event_type="task_failed",
-                severity="negative",
+                event_type=EventType.TASK_FAILED,
+                severity=EventSeverity.NEGATIVE,
                 impact=-0.02,  # -2% trust per failure
                 confidence=1.0,
                 context={
@@ -208,8 +189,8 @@ class MetricsReporter:
             # Publish error event with -3% trust impact
             await sdk.event_client.publish_trust_event(
                 agent_id=agent_id,
-                event_type="error",
-                severity="critical",
+                event_type=EventType.TASK_FAILED,
+                severity=EventSeverity.CRITICAL,
                 impact=-0.03,  # -3% trust per error
                 confidence=1.0,
                 context={
@@ -256,8 +237,8 @@ class MetricsReporter:
             # Publish governance violation with -5% trust impact
             await sdk.event_client.publish_trust_event(
                 agent_id=agent_id,
-                event_type="governance_violation",
-                severity="critical",
+                event_type=EventType.POLICY_VIOLATION,
+                severity=EventSeverity.CRITICAL,
                 impact=-0.05,  # -5% trust per governance violation
                 confidence=1.0,
                 context={
@@ -315,8 +296,8 @@ class MetricsReporter:
             if rating >= 4:
                 await sdk.event_client.publish_trust_event(
                     agent_id=agent_id,
-                    event_type="positive_feedback",
-                    severity="positive",
+                    event_type=EventType.USER_FEEDBACK,
+                    severity=EventSeverity.POSITIVE,
                     impact=0.005,  # +0.5% trust for good ratings
                     confidence=1.0,
                     context={

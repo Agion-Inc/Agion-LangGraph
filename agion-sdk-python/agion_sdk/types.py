@@ -98,8 +98,8 @@ class TrustEvent(BaseModel):
     agent_id: str
     event_type: EventType
     severity: EventSeverity
-    impact: float = 0.0  # -1.0 to +1.0
-    confidence: float = 1.0  # 0.0 to 1.0
+    impact: float = Field(0.0, ge=-1.0, le=1.0, description="Trust impact from -1.0 to +1.0")
+    confidence: float = Field(1.0, ge=0.0, le=1.0, description="Confidence from 0.0 to 1.0")
     context: Dict[str, Any] = Field(default_factory=dict)
     timestamp: Optional[datetime] = None
 

@@ -95,7 +95,7 @@ def governed_node(agent_name: str, action: str):
                         await metrics_reporter.report_governance_violation(
                             agent_id=full_agent_id,
                             execution_id=execution_id,
-                            policy_id=policy_result.matched_policies[0].id
+                            policy_id=policy_result.matched_policies[0]
                             if policy_result.matched_policies
                             else "unknown",
                             violation=f"Policy denied action '{action}' for user {user_id}",

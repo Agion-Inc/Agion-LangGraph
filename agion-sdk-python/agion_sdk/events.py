@@ -140,7 +140,14 @@ class EventClient:
             feedback_type: Type of feedback (thumbs_up/thumbs_down)
             rating: Optional rating (1-5)
             comment: Optional comment
+
+        Raises:
+            ValueError: If rating is not between 1 and 5
         """
+        # Validate rating
+        if rating is not None and not (1 <= rating <= 5):
+            raise ValueError(f"Rating must be between 1 and 5, got {rating}")
+
         event = {
             "execution_id": execution_id,
             "user_id": user_id,

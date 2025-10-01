@@ -198,8 +198,8 @@ async def main():
         print(f"\nSDK Metrics:\n{metrics}")
 
     finally:
-        # Shutdown SDK
-        await sdk.shutdown()
+        # Disconnect SDK
+        await sdk.disconnect()
 
 
 if __name__ == "__main__":

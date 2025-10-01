@@ -11,6 +11,7 @@ Uses multiple detection methods combined with GPT-5 for contextual interpretatio
 """
 
 import logging
+import os
 from typing import Dict, Any, List
 import pandas as pd
 import numpy as np
@@ -18,15 +19,15 @@ from openai import AsyncOpenAI
 
 from ..state import AgentState
 from ..tools.analytics_tools import detect_anomalies_combined, detect_outliers_iqr, detect_outliers_zscore
-# from ..tools.storage_tools import get_uploaded_file_data  # TODO: Implement this function
+from ..tools.storage_tools import get_uploaded_file_data
 from ..governance_wrapper import governed_node
 
 logger = logging.getLogger(__name__)
 
 # Initialize Requesty AI client for GPT-5
 client = AsyncOpenAI(
-    api_key="",  # Will be set from env
-    base_url="https://api.requesty.ai/v1",
+    api_key=os.getenv("REQUESTY_AI_API_KEY", ""),
+    base_url=os.getenv("REQUESTY_AI_API_BASE", "https://router.requesty.ai/v1"),
 )
 
 # Try to import scikit-learn for ML-based detection
@@ -156,14 +157,19 @@ async def anomaly_detection_agent_node(state: AgentState) -> Dict[str, Any]:
 
     try:
         # Get uploaded file data if available
-        file_info = state.get("file_info")
+        uploaded_files = state.get("uploaded_files", [])
         df = None
 
-        if file_info:
-            file_id = file_info.get("file_id")
-            if file_id:
-                df = await get_uploaded_file_data(file_id)
-                logger.info(f"Loaded file data: {len(df)} rows, {len(df.columns)} columns")
+        if uploaded_files:
+            # Get database session from state (should be added by graph)
+            from core.database import get_db
+            async for db_session in get_db():
+                file_data_dict = await get_uploaded_file_data(uploaded_files, db_session)
+                if file_data_dict:
+                    # Get the first file's DataFrame
+                    df = next(iter(file_data_dict.values()))
+                    logger.info(f"Loaded file data: {len(df)} rows, {len(df.columns)} columns")
+                break
 
         if df is None or df.empty:
             response = (
@@ -182,6 +188,7 @@ async def anomaly_detection_agent_node(state: AgentState) -> Dict[str, Any]:
 
             return {
                 "messages": [{"role": "assistant", "content": response}],
+                "agent_response": response,
                 "next_agent": "supervisor",
             }
 
@@ -376,6 +383,7 @@ Total Unique Anomalies: {len(all_anomaly_indices)}
 
         return {
             "messages": [{"role": "assistant", "content": final_response}],
+            "agent_response": final_response,
             "metadata": metadata,
             "next_agent": "supervisor",
         }
@@ -392,5 +400,6 @@ Total Unique Anomalies: {len(all_anomaly_indices)}
 
         return {
             "messages": [{"role": "assistant", "content": error_response}],
+            "agent_response": error_response,
             "next_agent": "supervisor",
         }

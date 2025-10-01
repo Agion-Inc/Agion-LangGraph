@@ -52,12 +52,16 @@ from .exceptions import (
 __version__ = "0.1.0"
 __all__ = [
     "AgionSDK",
+    "MissionClient",
+    "EventClient",
     "SDKConfig",
     "PolicyDecision",
+    "PolicyResult",
     "EventType",
     "EventSeverity",
     "UserContext",
     "LLMInteraction",
+    "TrustEvent",
 ]
 
 logger = logging.getLogger(__name__)
@@ -74,6 +78,21 @@ class AgionSDK:
     - Dynamic configuration (prompts, models, resources)
     - Mission coordination
     - RBAC integration
+
+    Example:
+        # Simple usage
+        sdk = AgionSDK(agent_id="my-agent", redis_url="redis://localhost:6379")
+        await sdk.initialize()
+        try:
+            # Use SDK
+            pass
+        finally:
+            await sdk.disconnect()
+
+        # Context manager (recommended)
+        async with AgionSDK(agent_id="my-agent") as sdk:
+            # Use SDK
+            pass
     """
 
     def __init__(
@@ -119,6 +138,16 @@ class AgionSDK:
         # Initialization state
         self._initialized = False
 
+    async def __aenter__(self):
+        """Async context manager entry."""
+        await self.initialize()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit."""
+        await self.disconnect()
+        return False
+
     async def initialize(self) -> None:
         """
         Initialize the SDK and start background workers.
@@ -157,12 +186,12 @@ class AgionSDK:
             logger.error(f"Failed to initialize SDK: {e}")
             raise InitializationError(f"Failed to initialize SDK: {e}") from e
 
-    async def shutdown(self) -> None:
-        """Shutdown the SDK and cleanup resources."""
+    async def disconnect(self) -> None:
+        """Disconnect the SDK and cleanup resources."""
         if not self._initialized:
             return
 
-        logger.info("Shutting down Agion SDK")
+        logger.info("Disconnecting Agion SDK")
 
         # Stop policy sync
         if self._policy_sync:
@@ -176,7 +205,11 @@ class AgionSDK:
             await self._http_session.close()
 
         self._initialized = False
-        logger.info("Agion SDK shutdown complete")
+        logger.info("Agion SDK disconnected")
+
+    async def shutdown(self) -> None:
+        """Alias for disconnect() for backwards compatibility."""
+        await self.disconnect()
 
     def governed(
         self,
