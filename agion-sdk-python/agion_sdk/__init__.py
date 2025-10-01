@@ -43,25 +43,62 @@ from .policy_engine import PolicyEngine
 from .policy_sync import PolicySyncWorker
 from .events import EventClient, MissionClient
 from .decorators import GovernanceDecorator
+from .governance_client import GovernanceClient
+from .governance_models import (
+    ResourceType,
+    ActorType,
+    PermissionType,
+    ResourceStatus,
+    PermissionStatus,
+    RiskLevel,
+    GovernanceResource,
+    GovernancePermission,
+    PermissionCheckResult,
+)
 from .exceptions import (
     InitializationError,
     ResourceNotFoundError,
     ConfigurationError,
+    GovernanceAPIError,
+    PermissionDeniedError,
+    RateLimitError,
+    ServiceUnavailableError,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __all__ = [
+    # SDK
     "AgionSDK",
     "MissionClient",
     "EventClient",
+    "GovernanceClient",
+    # Configuration
     "SDKConfig",
+    # Policy
     "PolicyDecision",
     "PolicyResult",
+    # Events
     "EventType",
     "EventSeverity",
     "UserContext",
     "LLMInteraction",
     "TrustEvent",
+    # Governance enums
+    "ResourceType",
+    "ActorType",
+    "PermissionType",
+    "ResourceStatus",
+    "PermissionStatus",
+    "RiskLevel",
+    # Governance models
+    "GovernanceResource",
+    "GovernancePermission",
+    "PermissionCheckResult",
+    # Exceptions
+    "GovernanceAPIError",
+    "PermissionDeniedError",
+    "RateLimitError",
+    "ServiceUnavailableError",
 ]
 
 logger = logging.getLogger(__name__)
@@ -101,6 +138,8 @@ class AgionSDK:
         agent_version: str = "1.0.0",
         gateway_url: str = "http://gateway:8080",
         redis_url: str = "redis://redis:6379",
+        organization_id: Optional[str] = None,
+        enable_governance: bool = False,
         **kwargs,
     ):
         """
@@ -111,6 +150,8 @@ class AgionSDK:
             agent_version: Agent version
             gateway_url: Gateway service URL
             redis_url: Redis connection URL
+            organization_id: Organization ID for governance (required if enable_governance=True)
+            enable_governance: Enable unified governance client
             **kwargs: Additional configuration options
         """
         self.config = SDKConfig(
@@ -125,6 +166,16 @@ class AgionSDK:
         self.policy_engine = PolicyEngine()
         self.event_client = EventClient(self.config)
         self.mission_client = MissionClient(self.event_client, agent_id)
+
+        # Governance client (optional)
+        self.governance: Optional[GovernanceClient] = None
+        if enable_governance:
+            if not organization_id:
+                raise ConfigurationError("organization_id required when enable_governance=True")
+            self.governance = GovernanceClient(
+                base_url=f"{gateway_url}/api/v1",
+                organization_id=organization_id
+            )
 
         # Background workers
         self._policy_sync: Optional[PolicySyncWorker] = None
@@ -199,6 +250,10 @@ class AgionSDK:
 
         # Disconnect event client
         await self.event_client.disconnect()
+
+        # Close governance client
+        if self.governance:
+            await self.governance.close()
 
         # Close HTTP session
         if self._http_session:

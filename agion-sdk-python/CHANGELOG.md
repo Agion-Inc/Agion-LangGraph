@@ -2,7 +2,75 @@
 
 All notable changes to the Agion SDK will be documented in this file.
 
-## [0.1.0] - 2025-10-01
+## [0.2.0] - 2025-10-01
+
+### Added - Unified Governance System
+
+- **Complete GovernanceClient** with 24 HTTP endpoints for resource and permission management
+- **Resource Management**: CRUD operations for governed resources (model_provider, ai_model, database, api, storage, mcp_server, tool, webhook, compute)
+- **Permission Lifecycle**: Request → Approve → Use → Track workflow with status management
+- **Permission Checking**: Critical `check_permission()` method with L1 cache (30s TTL for approved, 5s for denied)
+- **Usage Tracking**: Async `update_usage()` for requests, tokens, and costs (fire-and-forget pattern)
+- **Policy Management**: List, create, evaluate CEL-based policies
+- **Data Models**: Complete Pydantic models (GovernanceResource, GovernancePermission, Policy, etc.)
+- **Exception Hierarchy**: `GovernanceAPIError`, `PermissionDeniedError`, `RateLimitError`, `ServiceUnavailableError`
+- **Performance Optimizations**:
+  - L1 permission cache with <1μs cache hits
+  - Async usage updates (non-blocking)
+  - Connection pooling with aiohttp
+  - Cache statistics tracking (`get_cache_stats()`)
+
+### Enhanced
+
+- **AgionSDK**: Added optional `governance` client (enabled with `enable_governance=True` + `organization_id`)
+- **Exports**: Added governance enums (ResourceType, ActorType, PermissionType, ResourceStatus, PermissionStatus, RiskLevel)
+- **Documentation**: Created comprehensive [USAGE.md](./USAGE.md) with integration examples
+- **Error Handling**: Improved error mapping for governance API responses (400, 403, 404, 429, 503)
+- **Version**: Bumped to 0.2.0
+
+### Integration Points
+
+- Agents can request permissions to use governed resources
+- Trust-based access control (agents with higher trust scores can access more sensitive resources)
+- Rate limiting and budget constraints enforced at permission check time
+- Complete audit trail for all resource access via usage tracking
+- Resource hierarchy support (parent-child relationships)
+
+### Breaking Changes
+
+None (unified governance is opt-in via `enable_governance=True`)
+
+### Migration Guide
+
+To enable unified governance:
+
+```python
+# Before (v0.1.0)
+sdk = AgionSDK(
+    agent_id="my-agent",
+    gateway_url="http://gateway:8080"
+)
+
+# After (v0.2.0) - Opt-in governance
+sdk = AgionSDK(
+    agent_id="my-agent",
+    gateway_url="http://gateway:8080",
+    organization_id="org-123",      # Required for governance
+    enable_governance=True           # Opt-in
+)
+
+# Use governance client
+result = await sdk.governance.check_permission(
+    actor_id="my-agent",
+    actor_type=ActorType.AGENT,
+    resource_id="gpt-4-resource-id",
+    permission_type=PermissionType.USE
+)
+```
+
+---
+
+## [0.1.0] - 2025-09-25
 
 ### Added
 - Initial release of Agion SDK for Python

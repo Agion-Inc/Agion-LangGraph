@@ -77,3 +77,29 @@ class TimeoutError(AgionSDKError):
 class ValidationError(AgionSDKError):
     """Raised when data validation fails."""
     pass
+
+
+# Governance-specific exceptions
+
+class GovernanceAPIError(AgionSDKError):
+    """Base exception for governance API errors."""
+
+    def __init__(self, message: str, status_code: int = None, response: dict = None):
+        super().__init__(message)
+        self.status_code = status_code
+        self.response = response or {}
+
+
+class PermissionDeniedError(GovernanceAPIError):
+    """Raised when permission check returns denied."""
+    pass
+
+
+class RateLimitError(GovernanceAPIError):
+    """Raised when rate limit is exceeded."""
+    pass
+
+
+class ServiceUnavailableError(GovernanceAPIError):
+    """Raised when governance service is unavailable."""
+    pass
