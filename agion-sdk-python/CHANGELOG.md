@@ -2,6 +2,44 @@
 
 All notable changes to the Agion SDK will be documented in this file.
 
+## [0.2.1] - 2025-10-01
+
+### Fixed - Critical Production Issues
+
+**Python 3.12+ Compatibility:**
+- Fixed deprecated `datetime.utcnow()` → `datetime.now(timezone.utc)` (prevents warnings, Python 3.14 compatibility)
+- Fixed Pydantic `.dict()` → `.model_dump()` (Pydantic v2 compatibility)
+
+**Memory Leak Prevention:**
+- Implemented LRU cache with `max_size=10000` for permission checks
+- Uses `OrderedDict` for efficient FIFO eviction when cache full
+- Added `move_to_end()` for proper LRU behavior on cache hits
+- Prevents unbounded memory growth in long-running agents
+
+**Connection Pool Limits:**
+- Added `aiohttp.TCPConnector` configuration:
+  - Max total connections: 100
+  - Max per host: 30
+  - DNS cache TTL: 300s
+- Prevents file descriptor exhaustion under high load
+
+**Race Condition Fix:**
+- Added `asyncio.Lock` for session creation in `GovernanceClient`
+- Double-check pattern prevents duplicate session creation
+- Eliminates session leaks from concurrent access
+
+**Improved Exception Handling:**
+- Changed broad `except Exception` to specific exception types
+- Now catches `(aiohttp.ClientError, asyncio.TimeoutError)`
+- Better error visibility and debugging
+
+**Performance:**
+- LRU eviction: O(1) amortized
+- Lock overhead: <1μs (negligible)
+- Cache stats now includes `max_size` tracking
+
+---
+
 ## [0.2.0] - 2025-10-01
 
 ### Added - Unified Governance System
