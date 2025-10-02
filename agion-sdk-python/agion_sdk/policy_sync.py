@@ -159,7 +159,7 @@ class PolicySyncWorker:
             return True
 
         # Sync if we haven't synced in the last interval
-        elapsed = datetime.utcnow() - self._last_sync
+        elapsed = datetime.now(timezone.utc) - self._last_sync
         return elapsed.total_seconds() >= self.config.policy_sync_interval
 
     async def _sync_policies(self) -> None:
@@ -182,7 +182,7 @@ class PolicySyncWorker:
                     # Update local policy engine
                     self.on_policy_update(policies)
 
-                    self._last_sync = datetime.utcnow()
+                    self._last_sync = datetime.now(timezone.utc)
                     self._sync_count += 1
 
                     logger.info(f"Synced {len(policies)} policies")
@@ -190,7 +190,7 @@ class PolicySyncWorker:
                 elif response.status == 404:
                     # No policies for this agent
                     self.on_policy_update([])
-                    self._last_sync = datetime.utcnow()
+                    self._last_sync = datetime.now(timezone.utc)
                     logger.info("No policies found for agent")
 
                 else:

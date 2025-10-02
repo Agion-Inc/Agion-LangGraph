@@ -4,7 +4,7 @@ import asyncio
 import json
 import logging
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from collections import deque
 
 import redis.asyncio as aioredis
@@ -118,7 +118,7 @@ class EventClient:
             impact=impact,
             confidence=confidence,
             context=context or {},
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
         )
 
         await self._publish_event("agion:events:trust", event.model_dump())
@@ -154,7 +154,7 @@ class EventClient:
             "feedback_type": feedback_type,
             "rating": rating,
             "comment": comment,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         await self._publish_event("agion:events:feedback", event)
@@ -198,7 +198,7 @@ class EventClient:
             "event_type": event_type,
             "participant_id": participant_id,
             "data": data or {},
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         await self._publish_event("agion:events:missions", event)
@@ -227,7 +227,7 @@ class EventClient:
             to_participant=to_participant,
             message_type=message_type,
             content=content,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
         )
 
         await self._publish_event(
@@ -334,7 +334,7 @@ class MissionClient:
             participant_id=self.agent_id,
             role=role,
             state=initial_state or {},
-            joined_at=datetime.utcnow(),
+            joined_at=datetime.now(timezone.utc),
         )
 
         self._active_missions[mission_id] = participant

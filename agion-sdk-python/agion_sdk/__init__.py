@@ -24,7 +24,7 @@ Example:
 import logging
 from typing import Dict, List, Optional
 import aiohttp
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from .types import (
     SDKConfig,
@@ -343,7 +343,7 @@ class AgionSDK:
         # Check cache
         if use_cache and location in self._prompt_cache:
             prompt, cached_at = self._prompt_cache[location]
-            if datetime.utcnow() - cached_at < timedelta(seconds=self.config.config_cache_ttl):
+            if datetime.now(timezone.utc) - cached_at < timedelta(seconds=self.config.config_cache_ttl):
                 return prompt
 
         # Fetch from API
@@ -355,7 +355,7 @@ class AgionSDK:
                     prompt = PromptConfig(**data)
 
                     # Cache
-                    self._prompt_cache[location] = (prompt, datetime.utcnow())
+                    self._prompt_cache[location] = (prompt, datetime.now(timezone.utc))
 
                     return prompt
                 elif response.status == 404:
@@ -386,7 +386,7 @@ class AgionSDK:
         # Check cache
         if use_cache and purpose in self._model_cache:
             model, cached_at = self._model_cache[purpose]
-            if datetime.utcnow() - cached_at < timedelta(seconds=self.config.config_cache_ttl):
+            if datetime.now(timezone.utc) - cached_at < timedelta(seconds=self.config.config_cache_ttl):
                 return model
 
         # Fetch from API
@@ -398,7 +398,7 @@ class AgionSDK:
                     model = ModelConfig(**data)
 
                     # Cache
-                    self._model_cache[purpose] = (model, datetime.utcnow())
+                    self._model_cache[purpose] = (model, datetime.now(timezone.utc))
 
                     return model
                 elif response.status == 404:
@@ -429,7 +429,7 @@ class AgionSDK:
         # Check cache
         if use_cache and name in self._resource_cache:
             resource, cached_at = self._resource_cache[name]
-            if datetime.utcnow() - cached_at < timedelta(seconds=self.config.config_cache_ttl):
+            if datetime.now(timezone.utc) - cached_at < timedelta(seconds=self.config.config_cache_ttl):
                 return resource
 
         # Fetch from API
@@ -441,7 +441,7 @@ class AgionSDK:
                     resource = ResourceConfig(**data)
 
                     # Cache
-                    self._resource_cache[name] = (resource, datetime.utcnow())
+                    self._resource_cache[name] = (resource, datetime.now(timezone.utc))
 
                     return resource
                 elif response.status == 404:
@@ -497,7 +497,7 @@ class AgionSDK:
                 "agent_id": self.config.agent_id,
                 "version": self.config.agent_version,
                 "status": "active",
-                "registered_at": datetime.utcnow().isoformat(),
+                "registered_at": datetime.now(timezone.utc).isoformat(),
             }
 
             async with self._http_session.post(url, json=data) as response:

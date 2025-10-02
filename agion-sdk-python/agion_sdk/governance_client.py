@@ -9,7 +9,8 @@ import logging
 import aiohttp
 import asyncio
 from typing import Optional, List, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from collections import OrderedDict
 
 from .governance_models import (
     # Resource models
@@ -122,19 +123,33 @@ class GovernanceClient:
         self.cache_ttl_denied = cache_ttl_denied
 
         self._session: Optional[aiohttp.ClientSession] = None
-        self._permission_cache: Dict[str, tuple[PermissionCheckResult, datetime]] = {}
+        self._session_lock = asyncio.Lock()
+        self._permission_cache: OrderedDict = OrderedDict()
+        self._cache_max_size = 10000  # Prevent unbounded growth
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create HTTP session with connection pooling."""
         if self._session is None or self._session.closed:
-            headers = {}
-            if self.api_key:
-                headers["Authorization"] = f"Bearer {self.api_key}"
+            async with self._session_lock:
+                # Double-check after acquiring lock
+                if self._session is None or self._session.closed:
+                    headers = {}
+                    if self.api_key:
+                        headers["Authorization"] = f"Bearer {self.api_key}"
 
-            self._session = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=self.timeout),
-                headers=headers
-            )
+                    # Configure connection pool limits
+                    connector = aiohttp.TCPConnector(
+                        limit=100,            # Max total connections
+                        limit_per_host=30,    # Max per host
+                        ttl_dns_cache=300,    # DNS cache TTL
+                        enable_cleanup_closed=True
+                    )
+
+                    self._session = aiohttp.ClientSession(
+                        timeout=aiohttp.ClientTimeout(total=self.timeout),
+                        headers=headers,
+                        connector=connector
+                    )
         return self._session
 
     async def close(self):
@@ -214,7 +229,7 @@ class GovernanceClient:
         url = f"{self.base_url}/resources"
 
         try:
-            async with session.post(url, json=req.dict(exclude_none=True)) as response:
+            async with session.post(url, json=req.model_dump(exclude_none=True)) as response:
                 data = await self._handle_response(response, 201)
                 return GovernanceResource(**data)
         except aiohttp.ClientConnectorError as e:
@@ -255,7 +270,7 @@ class GovernanceClient:
         """
         session = await self._get_session()
         url = f"{self.base_url}/resources"
-        params = filters.dict(exclude_none=True)
+        params = filters.model_dump(exclude_none=True)
 
         try:
             async with session.get(url, params=params) as response:
@@ -283,7 +298,7 @@ class GovernanceClient:
         url = f"{self.base_url}/resources/{resource_id}"
 
         try:
-            async with session.put(url, json=updates.dict(exclude_none=True)) as response:
+            async with session.put(url, json=updates.model_dump(exclude_none=True)) as response:
                 data = await self._handle_response(response, 200)
                 return GovernanceResource(**data)
         except aiohttp.ClientConnectorError as e:
@@ -348,7 +363,7 @@ class GovernanceClient:
         url = f"{self.base_url}/permissions"
 
         try:
-            async with session.post(url, json=req.dict(exclude_none=True)) as response:
+            async with session.post(url, json=req.model_dump(exclude_none=True)) as response:
                 data = await self._handle_response(response, 201)
                 return GovernancePermission(**data)
         except aiohttp.ClientConnectorError as e:
@@ -404,12 +419,14 @@ class GovernanceClient:
         cache_key = self._cache_key(actor_id, resource_id, permission_type.value)
         if cache_key in self._permission_cache:
             cached_result, cached_at = self._permission_cache[cache_key]
-            age = (datetime.utcnow() - cached_at).total_seconds()
+            age = (datetime.now(timezone.utc) - cached_at).total_seconds()
 
             # Use cached result if within TTL
             ttl = self.cache_ttl_approved if cached_result.allowed else self.cache_ttl_denied
             if age < ttl:
                 logger.debug(f"Permission cache hit: {cache_key} (age={age:.1f}s)")
+                # Move to end (LRU)
+                self._permission_cache.move_to_end(cache_key)
                 return cached_result
 
         # Cache miss - call API
@@ -426,13 +443,16 @@ class GovernanceClient:
         )
 
         try:
-            async with session.post(url, json=req.dict()) as response:
+            async with session.post(url, json=req.model_dump()) as response:
                 data = await self._handle_response(response, 200)
                 result = PermissionCheckResult(**data)
 
-                # Cache the result
+                # Cache the result with LRU eviction
                 ttl = self.cache_ttl_approved if result.allowed else self.cache_ttl_denied
-                self._permission_cache[cache_key] = (result, datetime.utcnow())
+                if len(self._permission_cache) >= self._cache_max_size:
+                    # Remove oldest entry (FIFO)
+                    self._permission_cache.popitem(last=False)
+                self._permission_cache[cache_key] = (result, datetime.now(timezone.utc))
 
                 logger.debug(
                     f"Permission check: {actor_id} → {resource_id} = "
@@ -480,12 +500,12 @@ class GovernanceClient:
         )
 
         try:
-            async with session.post(url, json=req.dict()) as response:
+            async with session.post(url, json=req.model_dump()) as response:
                 if response.status != 204:
                     await self._handle_response(response, 204)
         except aiohttp.ClientConnectorError as e:
             logger.warning(f"Failed to update usage (service unavailable): {e}")
-        except Exception as e:
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             logger.warning(f"Failed to update usage: {e}")
 
     async def get_active_permissions(
@@ -527,7 +547,7 @@ class GovernanceClient:
         """
         session = await self._get_session()
         url = f"{self.base_url}/permissions"
-        params = filters.dict(exclude_none=True)
+        params = filters.model_dump(exclude_none=True)
 
         try:
             async with session.get(url, params=params) as response:
@@ -635,7 +655,7 @@ class GovernanceClient:
         """
         session = await self._get_session()
         url = f"{self.base_url}/policies"
-        params = filters.dict(exclude_none=True) if filters else {}
+        params = filters.model_dump(exclude_none=True) if filters else {}
 
         try:
             async with session.get(url, params=params) as response:
@@ -658,7 +678,7 @@ class GovernanceClient:
         url = f"{self.base_url}/policies"
 
         try:
-            async with session.post(url, json=req.dict(exclude_none=True)) as response:
+            async with session.post(url, json=req.model_dump(exclude_none=True)) as response:
                 data = await self._handle_response(response, 201)
                 return Policy(**data)
         except aiohttp.ClientConnectorError as e:
@@ -742,7 +762,7 @@ class GovernanceClient:
 
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         valid_entries = 0
         expired_entries = 0
 
@@ -758,5 +778,6 @@ class GovernanceClient:
             "total_entries": len(self._permission_cache),
             "valid_entries": valid_entries,
             "expired_entries": expired_entries,
+            "max_size": self._cache_max_size,
             "cache_hit_rate": f"{(valid_entries / max(1, len(self._permission_cache))) * 100:.1f}%"
         }
